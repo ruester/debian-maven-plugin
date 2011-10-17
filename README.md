@@ -1,4 +1,5 @@
 Debian Maven Plugin
+===================
 
 The name is self explanatory. It allows maven to prepare a Debian
 package. It is not, by any means, intended to be a full on "Debian style"
