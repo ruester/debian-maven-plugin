@@ -24,7 +24,7 @@
 package com.swellimagination;
 
 import java.util.Properties;
-import java.util.HashMap;
+import java.util.TreeMap;
 import org.apache.maven.plugin.AbstractMojo;
 import org.apache.maven.plugin.MojoExecutionException;
 import org.apache.maven.project.MavenProject;
@@ -47,7 +47,7 @@ public class DebianMojo extends AbstractMojo
      * @parameter
      * @optional
      */
-    private HashMap options = new HashMap();
+    private TreeMap options = new TreeMap();
 
     /**
      * @parameter

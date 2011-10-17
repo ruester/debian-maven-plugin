@@ -2,7 +2,8 @@
   (:require [clojure.string :as str]
             [clojure.contrib.duck-streams :as duck])
   (:use     [clojure.contrib.shell-out :only (sh)])
-  (:import [java.util Properties Map]
+  (:import [java.util Date Properties Map Locale]
+           [java.text SimpleDateFormat]
            [org.apache.maven.plugin MojoExecutionException]
            [org.apache.maven.project MavenProject])
   (:gen-class :name         com.swellimagination.debian.PackageMojo
@@ -17,7 +18,24 @@
 ;;; (used to separate the name from the version in a debian dependency property
 (def vs "_")
 
-(def mkdir "/bin/mkdir")
+(def mkdir   "mkdir")
+(def fmt     "fmt")
+(def debuild "debuild")
+(def copy    "cp")
+(def ls      "ls")
+(def bash    "/bin/bash")
+
+(def default-maintainer        "Oster Hase <osterhase@rapanui.com>")
+(def default-section           "unknown")
+(def default-priority          "optional")
+(def default-build-depends     "debhelper (>= 7.0.50~)")
+(def default-standards-version "3.9.1" )
+(def default-homepage          "http://localhost")
+(def default-architecture      "all")
+(def default-description       "<insert description here>")
+(def default-files             "*.jar")
+(def default-target-subdir     "target")
+(def default-install-dir       "/usr/share/java")
 
 (defn pm-init
   [project]
@@ -58,32 +76,60 @@
       (.info (.getLog this) (str "Depends On " (package-spec package)))
       package)))
 
+(defn- java->map
+  [object]
+  (reduce #(assoc %1 (keyword (.getKey %2)) (.getValue %2)) {} object))
+
 (defn pm-build
   [this dependency-overrides configuration]
-  (let [project              (.state this)
+  (let [configuration        (java->map configuration)
+        project              (.state this)
         artifactId           (.getArtifactId project)
         version              (.getVersion project)
         overrides            (enumeration-seq (.propertyNames dependency-overrides))
         dependencies         (get-dependencies this project overrides dependency-overrides)
         base-dir             (.getBasedir project)
-        debian-dir           (str/join "/" [base-dir
-                                            (:target-dir configuration "target")
-                                            (str artifactId "-" version)
-                                            "debian"])
-        target-dir           (str/join "/" [debian-dir artifactId])]
-    (sh mkdir "-p" target-dir)
+        target-dir           (str/join "/" [base-dir (:targetDir configuration default-target-subdir )])
+        package-dir          (str/join "/" [target-dir (str artifactId "-" version)])
+        debian-dir           (str/join "/" [package-dir "debian"])
+        install-dir          (:installDir configuration default-install-dir)]
+    (sh mkdir "-p" debian-dir)
     (duck/write-lines
      (str/join "/" [debian-dir "control"])
      [(str "Source: "           artifactId)
-      (str "Section: "          (:section configuration "unknown"))
-      (str "Priority: "         (:priority configuration "optional"))
-      (str "Maintainer: "       (:maintainer configuration "Oster Hase <osterhase@rapanui.com>"))
-      (str "Build-Depends: "    (:buildDepends configuration "debhelper (>= 7.0.50~"))
-      (str "Standards-Version:" (:standardsVersion configuration "3.9.1"))
-      (str "Homepage:"          (:homepage configuration "http://localhost"))
+      (str "Section: "           (:section configuration default-section))
+      (str "Priority: "          (:priority configuration default-priority))
+      (str "Maintainer: "        (:maintainer configuration default-maintainer))
+      (str "Build-Depends: "     (:buildDepends configuration default-build-depends))
+      (str "Standards-Version: " (:standardsVersion configuration default-standards-version))
+      (str "Homepage: "          (:homepage configuration default-homepage))
       ""
-      (str "Package:"           artifactId)
-      (str "Architecture:"      (:architecture configuration "all"))
-      (str "Version:"           (:version configuration version))
-      (str "Depends:"           (format-dependencies dependencies))])))
+      (str "Package: "           artifactId)
+      (str "Architecture: "      (:architecture configuration default-architecture))
+      (str "Depends: "           (format-dependencies dependencies))
+      (str "Description: "       (sh fmt "-w60" :in (:description configuration default-description)))])
+    (duck/write-lines
+     (str/join "/" [debian-dir "changelog"])
+     [(str artifactId " (" (:version configuration version) ") unstable; urgency=low")
+      ""
+      "  * Initial Release."
+      ""
+      (str " -- "
+           (:maintainer configuration default-maintainer) "  "
+           (.format (SimpleDateFormat. "EEE, d MMM yyyy HH:mm:ss Z" (Locale/CANADA)) (Date.)))])
+    (duck/write-lines
+     (str/join "/" [debian-dir "rules"])
+     ["#!/usr/bin/make -f" "%:"
+      "\tdh $@"])
+    (duck/write-lines
+     (str/join "/" [package-dir "Makefile"])
+     [(str "INSTALLDIR := $(DESTDIR)/" install-dir)
+      "build:"
+      ""
+      "install:"
+      "\t@mkdir -p $(INSTALLDIR)"
+      (str/join " "
+                ["\t@cd" target-dir "&&"
+                 copy (:files configuration default-files) "$(INSTALLDIR)"])])
+    (.info (.getLog this) (sh debuild :dir debian-dir))))
 
