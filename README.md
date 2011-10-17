@@ -13,11 +13,12 @@ Usage:
 Add the plugin to your POM.xml file (see <plugin> section in the following
 example). Then, invoke
 
-mvn debian:package
+    mvn debian:package
 
 You probably want to start with the default values and start working from
 there.  See the following example POM.xml
 
+```xml
 <groupId>com.acme</groupId>
 <artifactId>roadrunner-trap</artifactId>
 <version>2.5</version>
@@ -30,11 +31,11 @@ there.  See the following example POM.xml
       <artifactId>nuclear-fusion</artifactId>
       <version>0.1-beta2</version>
     </dependency>
-    <dependency>
+  <dependency>
       <groupId>org.hibernate</groupId>
       <artifactId>hibernate</artifactId>
       <version>3.2.5</version>
-    </dependency>
+  </dependency>
 </dependencies>
 
 <build>
@@ -65,7 +66,7 @@ there.  See the following example POM.xml
       </plugin>
   </plugins>
 </build>
-
+```
 At its most basic, if you just included the plugin with NO configuration,
 it would build a debian package "roadrunner-trap" with version 2.5. The
 debian package would be placed under the usual standard target directory
@@ -75,20 +76,20 @@ nuclear-fusion (version 0.1-beta2) and hibernate(3.2.5)
 The configuration is 100% optional, but you probably need at least a
 couple of these elements to create your package. 
 
-1. <version> specifies the version for the Debian package being created 
+1. &lt;version&gt; specifies the version for the Debian package being created 
    and it is automatically taken from the version for the artifact 
    being built. In this example, we will be overriding version the version
    number 2.5 with the debian package version 2.5.99. 
 
-2. <maintainer> specifies the name and email of the package maintainer.
+2. &lt;maintainer&gt; specifies the name and email of the package maintainer.
    You can hardcode it here directly or, like I show in this example, use
    environment variables for example. Note that the Debian scripts are
    particularly anal about the format for this field (ok, they are pretty
    anal about everything) and it should read something along the lines of
-   Wile E. Coyote <wile@acme.com> 
-   (note the space between the name and the < character. Yes. It matters!)
+   _Wile E. Coyote &lt;wile@acme.com&gt;_
+   (note the space between the name and the &lt; character. Yes. It matters!)
    Also, remember to escape the angle brackets with the proper xml escape
-   codes .. ie.. &lt; or &gt;)
+   codes .. ie.. &amp;lt; or &amp;gt;)
 
 3. The target location where the packet contents will be put on the target
    system. Defaults to /usr/share/java
@@ -98,9 +99,8 @@ couple of these elements to create your package.
    inside the package. Note that the files have to be present upon 
    invocation of the plugin. So unless you add the debian:package goal to
    a default build cycle phase (i.e. package), you need to make sure that 
-   the product is built *before* you try to package it.. for example:
-   
-   maven clean package debian:package
+   the product is built *before* you try to package it.. for example: 
+```maven clean package debian:package```
 
 6. Platform being targeted. Defaults to "all"    
 7. For more options consult the Debial control documentation, 
@@ -112,26 +112,29 @@ couple of these elements to create your package.
    way. For example, here, we are overriding the dependency for
    hibernate to a given package version. Note the wildcard character
    in the dependency name. The names are evaluated so:
-   <buildId>.<artifactId>_<version>
+   &lt;buildId&gt;.&lt;artifactId&gt;_&lt;version&gt;
    wildcards are allowed to match a given dependency. In this manner for
    example, you could specify one big fat debian package meant to contain
    all of your other dependencies from ACME corporation.. i.e.
 
-   <dependencyOverride>
-     <name>com.acme.*</name>
-     <value>acme-tools_0.1</value>
-   </dependencyOverride>
-
+```xml
+<dependencyOverride>
+  <name>com.acme.*</name>
+  <value>acme-tools_0.1</value>
+</dependencyOverride>
+```
    Note the use of the _ to separate the package name and version. That is
    important. 
 
    Also, a match group in the name can be used to capture a given version 
    number. For example, you could write the example above as:
 
-   <dependencyOverride>
-     <name>com.acme_(.*)</name>
-     <value>acme-tools</value>
-   </dependencyOverride>
+```xml
+<dependencyOverride>
+  <name>com.acme_(.*)</name>
+  <value>acme-tools</value>
+</dependencyOverride>
+```
 
    This would extract the version number used for this artifact and use that
    as the version number for the acme-tools package
