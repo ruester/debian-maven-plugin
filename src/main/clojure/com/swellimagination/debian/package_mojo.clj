@@ -53,7 +53,7 @@
   [package]
   (str (:name package)
        (if-let [version (:version package)]
-         (str " (= " version ")"))))
+         (str " (>= " version ")"))))
 
 (defn- parse-spec
   [s]

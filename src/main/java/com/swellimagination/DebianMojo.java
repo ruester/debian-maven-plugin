@@ -53,11 +53,12 @@ public class DebianMojo extends AbstractMojo
      * @parameter
      * @optional
      */
-    private Properties debianDependencies = new Properties();
+    private Properties dependencyOverrides = new Properties();
 
     public void execute() throws MojoExecutionException
     {
         PackageMojo packageMojo = new PackageMojo(project);
-        packageMojo.build(debianDependencies, options);
+
+        packageMojo.build(dependencyOverrides, options);
     }
 }
