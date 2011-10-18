@@ -29,6 +29,25 @@
       <version>2.2.1</version>
     </dependency>
   </dependencies>
+
+  <profiles>
+      <profile>
+	<id>continuous-integration-build</id>
+	<distributionManagement>
+	  <repository>
+	    <id>nexus</id>
+	    <name>Releases</name>
+	    <url>http://nexus.technik.gateprotect.local/nexus/content/repositories/releases</url>
+	  </repository>
+	  <snapshotRepository>
+	    <id>nexus</id>
+	    <name>Snapshots</name>
+	    <url>http://nexus.technik.gateprotect.local/nexus/content/repositories/snapshots</url>
+	  </snapshotRepository>
+	</distributionManagement>
+      </profile>
+    </profiles>
+  
   <build>
     <plugins>
       <plugin>
