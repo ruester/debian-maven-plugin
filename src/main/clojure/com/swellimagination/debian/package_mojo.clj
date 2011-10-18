@@ -84,7 +84,7 @@
   [this dependency-overrides configuration]
   (let [configuration        (java->map configuration)
         project              (.state this)
-        artifactId           (.getArtifactId project)
+        artifactId           (:name configuration (.getArtifactId project))
         version              (.getVersion project)
         overrides            (enumeration-seq (.propertyNames dependency-overrides))
         dependencies         (get-dependencies this project overrides dependency-overrides)
