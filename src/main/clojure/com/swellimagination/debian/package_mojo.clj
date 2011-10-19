@@ -69,11 +69,13 @@
     (let [groupId         (.getGroupId dependency)
           artifactId      (.getArtifactId dependency)
           version         (.getVersion dependency)
+          scope           (.getScope dependency)
           dependency-name (str groupId "." artifactId vs version)
           override        (get-override overrides dependency-overrides dependency-name)
           override-spec   (or override (str artifactId vs version))
-          package         (parse-spec override-spec)]
-      (.info (.getLog this) (str "Depends On " (package-spec package)))
+          package         (if (not= scope "test") (parse-spec override-spec))]
+      (if-not (empty? package)
+              (.info (.getLog this) (str "Depends On " (package-spec package))))
       package)))
 
 (defn- java->map
