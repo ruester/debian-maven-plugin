@@ -32,7 +32,7 @@
 (def default-standards-version "3.9.1" )
 (def default-homepage          "http://localhost")
 (def default-architecture      "all")
-(def default-description       "<The Osterhase was too lazy to provide a description>")
+(def default-description       "The Osterhase was too lazy to provide a description")
 (def default-files             "*.jar")
 (def default-target-subdir     "target")
 (def default-install-dir       "/usr/share/java")
@@ -65,7 +65,7 @@
 
 (defn- format-description
   [configuration]
-  (let [description (:description configuration default-description)
+  (let [description (or (:description configuration) default-description)
         lines       (str/split-lines description)]
     (apply str
            (first lines) "\n"
