@@ -32,7 +32,7 @@
 (def default-standards-version "3.9.1" )
 (def default-homepage          "http://localhost")
 (def default-architecture      "all")
-(def default-description       "<insert description here>")
+(def default-description       "<The Osterhase was too lazy to provide a description>")
 (def default-files             "*.jar")
 (def default-target-subdir     "target")
 (def default-install-dir       "/usr/share/java")
@@ -62,6 +62,14 @@
 (defn- format-dependencies
   [dependencies]
   (str/join ", " (conj (map #(package-spec %1) dependencies) "${misc:Depends}")))
+
+(defn- format-description
+  [configuration]
+  (let [description (:description configuration default-description)
+        lines       (str/split-lines description)]
+    (apply str
+           (first lines) "\n"
+           (map #(str " " (str/replace %1 #"\s+" " ") "\n") (rest lines)))))
 
 (defn get-dependencies
   [this project overrides dependency-overrides]
@@ -109,7 +117,7 @@
       (str "Package: "           artifactId)
       (str "Architecture: "      (:architecture configuration default-architecture))
       (str "Depends: "           (format-dependencies dependencies))
-      (str "Description: "       (sh fmt "-w60" :in (:description configuration default-description)))])
+      (str "Description: "       (format-description configuration))])
     (duck/write-lines
      (str/join "/" [debian-dir "changelog"])
      [(str artifactId " (" (:version configuration version) ") unstable; urgency=low")
