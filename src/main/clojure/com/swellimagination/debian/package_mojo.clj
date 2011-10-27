@@ -140,6 +140,6 @@
       "\t@mkdir -p $(INSTALLDIR)"
       (str/join " "
                 ["\t@cd" target-dir "&&"
-                 copy (:files configuration default-files) "$(INSTALLDIR)"])])
+                 copy "-a" (:files configuration default-files) "$(INSTALLDIR)"])])
     (.info (.getLog this) (sh debuild :dir debian-dir))))
 
