@@ -1,7 +1,8 @@
 (ns com.swellimagination.debian.package-mojo
   (:require [clojure.string :as str]
             [clojure.contrib.duck-streams :as duck])
-  (:use     [clojure.contrib.shell-out :only (sh)])
+  (:use     [clojure.contrib.shell-out :only (sh)]
+            [com.swellimagination.debian.plugin])
   (:import [java.util Date Properties Map Locale]
            [java.text SimpleDateFormat]
            [org.apache.maven.plugin MojoExecutionException]
@@ -13,29 +14,6 @@
               :init         init
               :state        state
               :methods      [[build [java.util.Properties java.util.Map] void]]))
-
-;;; version separator character
-;;; (used to separate the name from the version in a debian dependency property
-(def vs "_")
-
-(def mkdir   "mkdir")
-(def fmt     "fmt")
-(def debuild "debuild")
-(def copy    "cp")
-(def ls      "ls")
-(def bash    "/bin/bash")
-
-(def default-maintainer        "Oster Hase <osterhase@rapanui.com>")
-(def default-section           "unknown")
-(def default-priority          "optional")
-(def default-build-depends     "debhelper (>= 7.0.50~)")
-(def default-standards-version "3.9.1" )
-(def default-homepage          "http://localhost")
-(def default-architecture      "all")
-(def default-description       "The Osterhase was too lazy to provide a description")
-(def default-files             "*.jar")
-(def default-target-subdir     "target")
-(def default-install-dir       "/usr/share/java")
 
 (defn pm-init
   [project]
@@ -65,7 +43,7 @@
 
 (defn- format-description
   [configuration]
-  (let [description (or (:description configuration) default-description)
+  (let [description (or (:description configuration) description)
         lines       (str/split-lines description)]
     (apply str
            (first lines) "\n"
@@ -86,47 +64,78 @@
               (.info (.getLog this) (str "Depends On " (package-spec package))))
       package)))
 
-(defn- java->map
-  [object]
-  (reduce #(assoc %1 (keyword (.getKey %2)) (.getValue %2)) {} object))
+(defn install-helper
+  [debian-dir configuration script type cases]
+  (if-let [commands (type configuration)]
+    (duck/write-lines
+     (str/join "/" [debian-dir script])
+     ["#!/bin/sh"
+      "set -e"
+      "case \"$1\" in"
+           (str cases ")")
+           commands
+      "    ;;"
+      "esac"
+      "#DEBHELPER#"
+      "exit 0"
+      ])))
+
+(defn write-preinst
+  [debian-dir configuration]
+  (install-helper debian-dir configuration  "preinst" :preInstall "install|upgrade"))
+
+(defn write-postinst
+  [debian-dir config]
+  (install-helper debian-dir config "postinst" :postInstall "configure"))
+
+(defn write-prerm
+  [debian-dir config]
+  (install-helper debian-dir config "prerm" :preRemove "remove|upgrade|deconfigure"))
+
+(defn write-postrm
+  [debian-dir config]
+  (install-helper
+   debian-dir config "postrm" :postRemove
+   "purge|remove|upgrade|failed-upgrade|abort-install|abort-upgrade|disappear"))
 
 (defn pm-build
   [this dependency-overrides configuration]
   (let [configuration        (java->map configuration)
         project              (.state this)
-        artifactId           (:name configuration (.getArtifactId project))
+        artifact-id          (:name configuration (.getArtifactId project))
         version              (.getVersion project)
         overrides            (enumeration-seq (.propertyNames dependency-overrides))
         dependencies         (get-dependencies this project overrides dependency-overrides)
         base-dir             (.getBasedir project)
-        target-dir           (str/join "/" [base-dir (:targetDir configuration default-target-subdir )])
-        package-dir          (str/join "/" [target-dir (str artifactId "-" version)])
+        target-dir           (str/join "/" [base-dir (:targetDir configuration target-subdir )])
+        package-dir          (str/join "/" [target-dir (str artifact-id "-" version)])
         debian-dir           (str/join "/" [package-dir "debian"])
-        install-dir          (:installDir configuration default-install-dir)]
+        install-dir          (:installDir configuration install-dir)]
     (sh mkdir "-p" debian-dir)
     (duck/write-lines
      (str/join "/" [debian-dir "control"])
-     [(str "Source: "           artifactId)
-      (str "Section: "           (:section configuration default-section))
-      (str "Priority: "          (:priority configuration default-priority))
-      (str "Maintainer: "        (:maintainer configuration default-maintainer))
-      (str "Build-Depends: "     (:buildDepends configuration default-build-depends))
-      (str "Standards-Version: " (:standardsVersion configuration default-standards-version))
-      (str "Homepage: "          (:homepage configuration default-homepage))
+     [(str "Source: "           artifact-id)
+      (str "Section: "           (:section configuration section))
+      (str "Priority: "          (:priority configuration priority))
+      (str "Maintainer: "        (:maintainer configuration maintainer))
+      (str "Build-Depends: "     (:buildDepends configuration build-depends))
+      (str "Standards-Version: " (:standardsVersion configuration standards-version))
+      (str "Homepage: "          (:homepage configuration homepage))
       ""
-      (str "Package: "           artifactId)
-      (str "Architecture: "      (:architecture configuration default-architecture))
+      (str "Package: "           artifact-id)
+      (str "Architecture: "      (:architecture configuration architecture))
       (str "Depends: "           (format-dependencies dependencies))
       (str "Description: "       (format-description configuration))])
     (duck/write-lines
      (str/join "/" [debian-dir "changelog"])
-     [(str artifactId " (" (:version configuration version) ") unstable; urgency=low")
+     [(str artifact-id " (" (:version configuration version) ") unstable; urgency=low")
       ""
       "  * Initial Release."
       ""
       (str " -- "
-           (:maintainer configuration default-maintainer) "  "
-           (.format (SimpleDateFormat. "EEE, d MMM yyyy HH:mm:ss Z" (Locale/CANADA)) (Date.)))])
+           (:maintainer configuration maintainer) "  "
+           (.format (SimpleDateFormat. "EEE, d MMM yyyy HH:mm:ss Z"
+                                       (Locale/CANADA)) (Date.)))])
     (duck/write-lines
      (str/join "/" [debian-dir "rules"])
      ["#!/usr/bin/make -f" "%:"
@@ -140,6 +149,7 @@
       "\t@mkdir -p $(INSTALLDIR)"
       (str/join " "
                 ["\t@cd" target-dir "&&"
-                 copy "-a" (:files configuration default-files) "$(INSTALLDIR)"])])
+                 copy "-a" (:files configuration files) "$(INSTALLDIR)"])])
+    ((juxt write-preinst write-postinst write-prerm write-postrm)
+     debian-dir configuration)
     (.info (.getLog this) (sh debuild :dir debian-dir))))
-

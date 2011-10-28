@@ -25,18 +25,18 @@ package com.swellimagination;
 
 import java.util.Properties;
 import java.util.TreeMap;
+import java.net.URL;
 import org.apache.maven.plugin.AbstractMojo;
 import org.apache.maven.plugin.MojoExecutionException;
 import org.apache.maven.project.MavenProject;
-import com.swellimagination.debian.PackageMojo;
 
 /**
  * 
- * @goal package
+ * @goal deploy
  * @execute phase="package"
  * 
  */
-public class DebianMojo extends AbstractMojo
+public class DeployMojo extends AbstractMojo
 {
     /**
      * @parameter expression="${project}"
@@ -51,15 +51,16 @@ public class DebianMojo extends AbstractMojo
     private TreeMap options = new TreeMap();
 
     /**
-     * @parameter
-     * @optional
+     * @parameter expression="${deploy.mirror}"
+     * @required
      */
-    private Properties dependencyOverrides = new Properties();
+    private URL mirror;
 
     public void execute() throws MojoExecutionException
     {
-        PackageMojo packageMojo = new PackageMojo(project);
+        com.swellimagination.debian.DeployMojo deployMojo = 
+            new com.swellimagination.debian.DeployMojo(project);
 
-        packageMojo.build(dependencyOverrides, options);
+        deployMojo.execute(options, mirror);
     }
 }
