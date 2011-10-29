@@ -68,7 +68,7 @@
   [debian-dir configuration script type cases]
   (if-let [commands (type configuration)]
     (duck/write-lines
-     (str/join "/" [debian-dir script])
+     (path debian-dir script)
      ["#!/bin/sh"
       "set -e"
       "case \"$1\" in"
@@ -107,13 +107,13 @@
         overrides            (enumeration-seq (.propertyNames dependency-overrides))
         dependencies         (get-dependencies this project overrides dependency-overrides)
         base-dir             (.getBasedir project)
-        target-dir           (str/join "/" [base-dir (:targetDir configuration target-subdir )])
-        package-dir          (str/join "/" [target-dir (str artifact-id "-" version)])
-        debian-dir           (str/join "/" [package-dir "debian"])
+        target-dir           (path base-dir (:targetDir configuration target-subdir ))
+        package-dir          (path target-dir (str artifact-id "-" version))
+        debian-dir           (path package-dir "debian")
         install-dir          (:installDir configuration install-dir)]
     (sh mkdir "-p" debian-dir)
     (duck/write-lines
-     (str/join "/" [debian-dir "control"])
+     (path debian-dir "control")
      [(str "Source: "           artifact-id)
       (str "Section: "           (:section configuration section))
       (str "Priority: "          (:priority configuration priority))
@@ -127,7 +127,7 @@
       (str "Depends: "           (format-dependencies dependencies))
       (str "Description: "       (format-description configuration))])
     (duck/write-lines
-     (str/join "/" [debian-dir "changelog"])
+     (path debian-dir "changelog")
      [(str artifact-id " (" (:version configuration version) ") unstable; urgency=low")
       ""
       "  * Initial Release."
@@ -137,11 +137,11 @@
            (.format (SimpleDateFormat. "EEE, d MMM yyyy HH:mm:ss Z"
                                        (Locale/CANADA)) (Date.)))])
     (duck/write-lines
-     (str/join "/" [debian-dir "rules"])
+     (path debian-dir "rules")
      ["#!/usr/bin/make -f" "%:"
       "\tdh $@"])
     (duck/write-lines
-     (str/join "/" [package-dir "Makefile"])
+     (path package-dir "Makefile")
      [(str "INSTALLDIR := $(DESTDIR)/" install-dir)
       "build:"
       ""
