@@ -10,6 +10,7 @@
 (def debuild        "debuild")
 (def copy           "cp")
 (def ls             "ls")
+(def rm             "rm")
 (def bash           "/bin/bash")
 (def apt-move       "apt-move")
 (def apt-ftparchive "apt-ftparchive")

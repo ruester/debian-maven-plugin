@@ -152,4 +152,5 @@
                  copy "-a" (:files configuration files) "$(INSTALLDIR)"])])
     ((juxt write-preinst write-postinst write-prerm write-postrm)
      debian-dir configuration)
+    (sh rm "-fr" "debhelper.log" :dir debian-dir )
     (.info (.getLog this) (sh debuild :dir debian-dir))))
