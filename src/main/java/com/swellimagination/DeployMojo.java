@@ -33,7 +33,7 @@ import org.apache.maven.project.MavenProject;
 /**
  * 
  * @goal deploy
- * @execute phase="package"
+ * @execute goal="package"
  * 
  */
 public class DeployMojo extends AbstractMojo
