@@ -13,7 +13,9 @@
               :constructors {[org.apache.maven.project.MavenProject] []}
               :init         init
               :state        state
-              :methods      [[build [java.util.Properties java.util.Map] void]]))
+              :methods      [[build [java.util.Properties
+                                     java.util.LinkedList
+                                     java.util.Map] void]]))
 
 (defn pm-init
   [project]
@@ -49,20 +51,24 @@
            (first lines) "\n"
            (map #(str " " (str/replace %1 #"\s+" " ") "\n") (rest lines)))))
 
-(defn get-dependencies
+(defn- get-maven-dependencies
   [this project overrides dependency-overrides]
-  (for [dependency        (.getDependencies project)]
-    (let [groupId         (.getGroupId dependency)
-          artifactId      (.getArtifactId dependency)
-          version         (.getVersion dependency)
-          scope           (.getScope dependency)
-          dependency-name (str groupId "." artifactId vs version)
-          override        (get-override overrides dependency-overrides dependency-name)
-          override-spec   (or override (str artifactId vs version))
-          package         (if (not= scope "test") (parse-spec override-spec))]
-      (if-not (empty? package)
-              (.info (.getLog this) (str "Depends On " (package-spec package))))
-      package)))
+  (for [dep 
+        (for [dependency        (.getDependencies project)]
+          (let [groupId         (.getGroupId dependency)
+                artifactId      (.getArtifactId dependency)
+                version         (.getVersion dependency)
+                scope           (.getScope dependency)
+                dependency-name (str groupId "." artifactId vs version)
+                override        (get-override overrides dependency-overrides dependency-name)
+                override-spec   (or override (str artifactId vs version))
+                package         (if (not= scope "test") (parse-spec override-spec))]
+            package)) :when dep] dep))
+
+(defn get-dependencies
+  [this project overrides dependency-overrides extra-dependencies]
+  (concat (get-maven-dependencies this project overrides dependency-overrides)
+          (map #(parse-spec %1) extra-dependencies)))
 
 (defn install-helper
   [debian-dir configuration script type cases]
@@ -99,13 +105,13 @@
    "purge|remove|upgrade|failed-upgrade|abort-install|abort-upgrade|disappear"))
 
 (defn pm-build
-  [this dependency-overrides configuration]
+  [this dependency-overrides extra-dependencies configuration]
   (let [configuration        (java->map configuration)
         project              (.state this)
         artifact-id          (:name configuration (.getArtifactId project))
         version              (.getVersion project)
         overrides            (enumeration-seq (.propertyNames dependency-overrides))
-        dependencies         (get-dependencies this project overrides dependency-overrides)
+        dependencies         (get-dependencies this project overrides dependency-overrides extra-dependencies)
         base-dir             (.getBasedir project)
         target-dir           (path base-dir (:targetDir configuration target-subdir ))
         package-dir          (path target-dir (str artifact-id "-" version))
@@ -126,6 +132,8 @@
       (str "Architecture: "      (:architecture configuration architecture))
       (str "Depends: "           (format-dependencies dependencies))
       (str "Description: "       (format-description configuration))])
+    (doseq [pkg dependencies]
+          (.info (.getLog this) (str "Depends on " (package-spec pkg))))
     (duck/write-lines
      (path debian-dir "changelog")
      [(str artifact-id " (" (:version configuration version) ") unstable; urgency=low")

@@ -25,6 +25,7 @@ package com.swellimagination;
 
 import java.util.Properties;
 import java.util.TreeMap;
+import java.util.LinkedList;
 import org.apache.maven.plugin.AbstractMojo;
 import org.apache.maven.plugin.MojoExecutionException;
 import org.apache.maven.project.MavenProject;
@@ -55,11 +56,17 @@ public class DebianMojo extends AbstractMojo
      * @optional
      */
     private Properties dependencyOverrides = new Properties();
+    
+    /**
+     * @parameter
+     * @optional
+     */
+    private LinkedList extraDependencies = new LinkedList();
 
     public void execute() throws MojoExecutionException
     {
         PackageMojo packageMojo = new PackageMojo(project);
 
-        packageMojo.build(dependencyOverrides, options);
+        packageMojo.build(dependencyOverrides, extraDependencies, options);
     }
 }
