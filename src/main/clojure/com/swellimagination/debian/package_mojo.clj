@@ -132,7 +132,7 @@
       (str "Architecture: "      (:architecture configuration architecture))
       (str "Depends: "           (format-dependencies dependencies))
       (str "Description: "       (format-description configuration))])
-    (doseq [pkg dependencies]
+    (doseq [pkg dependencies :when (not-empty pkg)]
           (.info (.getLog this) (str "Depends on " (package-spec pkg))))
     (duck/write-lines
      (path debian-dir "changelog")
@@ -157,7 +157,9 @@
       "\t@mkdir -p $(INSTALLDIR)"
       (str/join " "
                 ["\t@cd" target-dir "&&"
-                 copy "-a" (:files configuration files) "$(INSTALLDIR)"])])
+                 copy "-a"
+                 (str/replace (:files configuration files) #"\s+" " ")
+                 "$(INSTALLDIR)"])])
     ((juxt write-preinst write-postinst write-prerm write-postrm)
      debian-dir configuration)
     (sh rm "-fr" "debhelper.log" :dir debian-dir )
