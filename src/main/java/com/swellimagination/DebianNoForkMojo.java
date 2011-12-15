@@ -30,7 +30,6 @@ import java.util.TreeMap;
 import org.apache.maven.plugin.AbstractMojo;
 import org.apache.maven.plugin.MojoExecutionException;
 import org.apache.maven.project.MavenProject;
-import com.swellimagination.debian.PackageMojo;
 
 /**
  * 
@@ -65,7 +64,8 @@ public class DebianNoForkMojo extends AbstractMojo {
 	private LinkedList extraDependencies = new LinkedList();
 
 	public void execute() throws MojoExecutionException {
-		PackageMojo packageMojo = new PackageMojo(project);
+		com.swellimagination.debian.PackageMojo packageMojo = new com.swellimagination.debian.PackageMojo(
+				project);
 
 		packageMojo.build(dependencyOverrides, extraDependencies, options);
 	}
