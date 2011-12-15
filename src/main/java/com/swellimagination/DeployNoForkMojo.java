@@ -23,12 +23,44 @@
 
 package com.swellimagination;
 
+import java.net.URL;
+import java.util.TreeMap;
+
+import org.apache.maven.plugin.AbstractMojo;
+import org.apache.maven.plugin.MojoExecutionException;
+import org.apache.maven.project.MavenProject;
+
 /**
  * 
- * @goal deploy
- * @execute goal="package"
+ * @goal deploy-no-fork
+ * @execute goal="package-no-fork"
  * 
  */
-public class DeployMojo extends DeployNoForkMojo {
+public class DeployNoForkMojo extends AbstractMojo {
+
+	/**
+	 * @parameter expression="${project}"
+	 * @required
+	 */
+	private MavenProject project;
+
+	/**
+	 * @parameter
+	 * @optional
+	 */
+	private TreeMap options = new TreeMap();
+
+	/**
+	 * @parameter expression="${deploy.mirror}"
+	 * @required
+	 */
+	private URL mirror;
+
+	public void execute() throws MojoExecutionException {
+		com.swellimagination.debian.DeployMojo deployMojo = new com.swellimagination.debian.DeployMojo(
+				project);
+
+		deployMojo.execute(options, mirror);
+	}
 
 }
