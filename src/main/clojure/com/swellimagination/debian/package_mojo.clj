@@ -70,21 +70,29 @@
   (concat (get-maven-dependencies this project overrides dependency-overrides)
           (map #(parse-spec %1) extra-dependencies)))
 
+(defn maybe-from-script
+  [commands]
+  (let [commands (str/trim commands)]
+    (if (.startsWith commands "!")
+      (str/join "\n" (duck/read-lines (.substring commands 1)))
+      commands)))
+
 (defn install-helper
   [debian-dir configuration script type cases]
-  (if-let [commands (type configuration)]
-    (duck/write-lines
-     (path debian-dir script)
-     ["#!/bin/sh"
-      "set -e"
-      "case \"$1\" in"
-           (str cases ")")
-           commands
-      "    ;;"
-      "esac"
-      "#DEBHELPER#"
-      "exit 0"
-      ])))
+  (if-let [commands (or (type configuration))]
+    (let [commands  (maybe-from-script commands)]
+      (duck/write-lines
+       (path debian-dir script)
+       ["#!/bin/sh"
+        "set -e"
+        "case \"$1\" in"
+        (str cases ")")
+        commands
+        "    ;;"
+        "esac"
+        "#DEBHELPER#"
+        "exit 0"
+        ]) )))
 
 (defn write-preinst
   [debian-dir configuration]
